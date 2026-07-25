@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .env
+/data/
+/public/sharon_sightings_map_editor.html
+/check_photo_gps_results.csv
