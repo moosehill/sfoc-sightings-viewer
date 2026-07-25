@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sharon Sightings — Location Review Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+  :root {
+    --blue: #2563eb; --green: #16a34a; --purple: #7c3aed; --red: #dc2626; --gray: #6b7280;
+    --bg: #f8fafc; --panel: #ffffff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  #app { display: flex; height: 100vh; width: 100vw; }
+  #map { flex: 1 1 auto; height: 100%; }
+  #sidebar { width: 420px; flex: 0 0 420px; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--border); }
+
+  #header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); }
+  #header h1 { font-size: 15px; margin: 0 0 8px; }
+  #stats { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; }
+  .stat b { display: block; font-size: 13px; }
+
+  #toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  #search { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+  #filters { display: flex; gap: 4px; flex-wrap: wrap; }
+  .filter-btn { font-size: 11px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; color: var(--muted); }
+  .filter-btn.active { background: var(--text); color: white; border-color: var(--text); }
+  #actions { display: flex; gap: 6px; }
+  .action-btn { flex: 1; font-size: 12px; padding: 7px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+  .action-btn.primary { background: var(--blue); color: white; border-color: var(--blue); }
+  .action-btn.danger { background: #fff1f2; color: var(--red); border-color: #fecdd3; }
+
+  #list { flex: 1 1 auto; overflow-y: auto; }
+  .row { padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
+  .row:hover { background: #f1f5f9; }
+  .row.selected { background: #eff6ff; border-left: 3px solid var(--blue); }
+  .row .name { font-weight: 600; }
+  .row .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .badge { display: inline-block; font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; padding: 1px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 1px; }
+  .badge.auto { background: #dbeafe; color: var(--blue); }
+  .badge.confirmed { background: #dcfce7; color: var(--green); }
+  .badge.corrected { background: #ede9fe; color: var(--purple); }
+  .badge.unplaced { background: #fee2e2; color: var(--red); }
+  .badge.excluded { background: #f1f5f9; color: var(--gray); }
+  #loadmore { display: block; width: 100%; padding: 10px; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-size: 12px; }
+
+  #detail { border-top: 2px solid var(--border); padding: 12px 14px; background: #fbfcfe; max-height: 46vh; overflow-y: auto; }
+  #detail.empty { color: var(--muted); font-size: 12.5px; }
+  #detail h2 { font-size: 14px; margin: 0 0 2px; }
+  #detail .sci { font-style: italic; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .field { font-size: 12px; margin-bottom: 4px; }
+  .field b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+  #detailActions { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+  #detailActions button { font-size: 11.5px; padding: 6px 9px; border-radius: 6px; border: 1px solid var(--border); background: white; cursor: pointer; }
+  #latlonEdit { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+  #latlonEdit input { width: 90px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
+  #latlonEdit button { font-size: 11.5px; padding: 5px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; }
+
+  #placementBanner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: #111827; color: white; padding: 8px 14px; border-radius: 8px; font-size: 13px; display: none; z-index: 1000; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+  #placementBanner button { margin-left: 10px; background: #ef4444; border: none; color: white; padding: 3px 8px; border-radius: 5px; cursor: pointer; font-size: 11px; }
+
+  .leaflet-tooltip.sfoc-tip { font-size: 12px; padding: 5px 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="placementBanner"></div>
+  <div id="sidebar">
+    <div id="header">
+      <h1>Sharon Sightings — Location Review</h1>
+      <div id="stats"></div>
+    </div>
+    <div id="toolbar">
+      <input id="search" type="text" placeholder="Search species or location…" />
+      <div id="filters"></div>
+      <div id="actions">
+        <button class="action-btn primary" id="exportBtn">Export corrected CSV</button>
+        <button class="action-btn danger" id="resetBtn">Reset edits</button>
+      </div>
+    </div>
+    <div id="list"></div>
+    <div id="detail" class="empty">Select a point on the map or from the list to see details and correct its location.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const RAW_DATA = {{DATA_JSON}};
+const DATA_VERSION = "{{DATA_VERSION}}";
+const STORAGE_KEY = "sfoc_review_state_v1";
+const VERSION_KEY = "sfoc_review_state_version";
+
+// ---- Load state ----
+// Corrections are cached in localStorage by row id so they survive reloads.
+// But whenever this file is regenerated with new server-side data (e.g. Claude
+// applying a batch correction), any stale cached coordinates must be discarded
+// rather than silently overriding the fresh data. We do this by stamping each
+// generated file with a DATA_VERSION; a mismatch means "server data changed
+// since your browser last saved," so we ignore the old cache and start clean.
+let saved = {};
+const storedVersion = localStorage.getItem(VERSION_KEY);
+if (storedVersion === DATA_VERSION) {
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch(e) { saved = {}; }
+} else {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.setItem(VERSION_KEY, DATA_VERSION);
+}
+
+const DATA = RAW_DATA.map(function(r) {
+  const s = saved[r.id];
+  const hasCoords = r.Latitude !== "" && r.Longitude !== "";
+  const item = Object.assign({}, r, {
+    lat: hasCoords ? parseFloat(r.Latitude) : null,
+    lon: hasCoords ? parseFloat(r.Longitude) : null,
+    status: hasCoords ? "auto" : "unplaced",
+  });
+  if (s) {
+    if (s.lat != null) item.lat = s.lat;
+    if (s.lon != null) item.lon = s.lon;
+    if (s.status) item.status = s.status;
+  }
+  return item;
+});
+const byId = {};
+DATA.forEach(function(d){ byId[d.id] = d; });
+
+function persist() {
+  const out = {};
+  DATA.forEach(function(d) {
+    out[d.id] = { lat: d.lat, lon: d.lon, status: d.status };
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
+}
+
+// ---- Map setup ----
+const map = L.map('map', { preferCanvas: true }).setView([42.1237, -71.1787], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const cluster = L.markerClusterGroup({
+  maxClusterRadius: 40,
+  spiderfyOnMaxZoom: true,
+  disableClusteringAtZoom: null,
+  zoomToBoundsOnClick: true
+});
+map.addLayer(cluster);
+
+const COLORS = { auto: '#2563eb', confirmed: '#16a34a', corrected: '#7c3aed', unplaced: '#dc2626', excluded: '#94a3b8' };
+const markerById = {};
+
+function makeMarker(d) {
+  if (d.lat == null || d.lon == null) return null;
+  if (d.status === 'excluded') return null;
+  const m = L.circleMarker([d.lat, d.lon], {
+    radius: 7, weight: 2, color: '#ffffff', fillColor: COLORS[d.status] || '#999',
+    fillOpacity: 0.95
+  });
+  m.bindTooltip(tooltipHtml(d), { className: 'sfoc-tip', direction: 'top', offset: [0, -6] });
+  m.on('click', function() { selectEntry(d.id, true); });
+  return m;
+}
+function tooltipHtml(d) {
+  return '<b>' + escapeHtml(d.CommonName) + '</b><br>' + escapeHtml(d.ObservationLocation) +
+         '<br><span style="color:#888">' + escapeHtml(d.ObservationDate) + '</span>';
+}
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function rebuildMarkers() {
+  cluster.clearLayers();
+  Object.keys(markerById).forEach(function(k){ delete markerById[k]; });
+  DATA.forEach(function(d) {
+    const m = makeMarker(d);
+    if (m) { markerById[d.id] = m; cluster.addLayer(m); }
+  });
+}
+rebuildMarkers();
+
+// ---- Placement mode ----
+let placementTargetId = null;
+const banner = document.getElementById('placementBanner');
+
+function startPlacement(id) {
+  placementTargetId = id;
+  const d = byId[id];
+  banner.style.display = 'block';
+  banner.innerHTML = 'Click on the map to set the location for: <b>' + escapeHtml(d.CommonName) +
+    '</b> (' + escapeHtml(d.ObservationDate) + ')<button id="cancelPlacement">Cancel</button>';
+  document.getElementById('cancelPlacement').onclick = cancelPlacement;
+  document.getElementById('map').style.cursor = 'crosshair';
+}
+function cancelPlacement() {
+  placementTargetId = null;
+  banner.style.display = 'none';
+  document.getElementById('map').style.cursor = '';
+}
+map.on('click', function(e) {
+  if (!placementTargetId) return;
+  const d = byId[placementTargetId];
+  d.lat = e.latlng.lat;
+  d.lon = e.latlng.lng;
+  d.status = 'corrected';
+  cancelPlacement();
+  persist();
+  rebuildMarkers();
+  renderStats();
+  renderList();
+  renderDetail(d.id);
+});
+
+// ---- Sidebar: filters / search / list ----
+let currentFilter = 'all';
+let currentSearch = '';
+let renderLimit = 200;
+let selectedId = null;
+
+const FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'unplaced', label: 'Needs review' },
+  { key: 'auto', label: 'Auto-placed' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'corrected', label: 'Corrected' },
+  { key: 'excluded', label: 'Ignored' },
+];
+
+function renderFilters() {
+  const el = document.getElementById('filters');
+  el.innerHTML = '';
+  FILTERS.forEach(function(f) {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn' + (currentFilter === f.key ? ' active' : '');
+    btn.textContent = f.label;
+    btn.onclick = function() { currentFilter = f.key; renderLimit = 200; renderList(); };
+    el.appendChild(btn);
+  });
+}
+
+function renderStats() {
+  const counts = { auto: 0, confirmed: 0, corrected: 0, unplaced: 0, excluded: 0 };
+  DATA.forEach(function(d) { counts[d.status] = (counts[d.status] || 0) + 1; });
+  const el = document.getElementById('stats');
+  el.innerHTML =
+    '<div class="stat"><b>' + DATA.length + '</b>total</div>' +
+    '<div class="stat"><b>' + counts.auto + '</b>auto-placed</div>' +
+    '<div class="stat"><b>' + counts.confirmed + '</b>confirmed</div>' +
+    '<div class="stat"><b>' + counts.corrected + '</b>corrected</div>' +
+    '<div class="stat"><b>' + counts.unplaced + '</b>needs review</div>' +
+    '<div class="stat"><b>' + counts.excluded + '</b>ignored</div>';
+}
+
+function matchesFilter(d) {
+  if (currentFilter !== 'all' && d.status !== currentFilter) return false;
+  if (currentSearch) {
+    const hay = (d.CommonName + ' ' + d.ObservationLocation + ' ' + d.ScientificName + ' ' + d.Observer).toLowerCase();
+    if (hay.indexOf(currentSearch) === -1) return false;
+  }
+  return true;
+}
+
+function renderList() {
+  const listEl = document.getElementById('list');
+  listEl.innerHTML = '';
+  const filtered = DATA.filter(matchesFilter);
+  const toShow = filtered.slice(0, renderLimit);
+  toShow.forEach(function(d) {
+    const row = document.createElement('div');
+    row.className = 'row' + (d.id === selectedId ? ' selected' : '');
+    row.innerHTML = '<div class="name">' + escapeHtml(d.CommonName) +
+      '<span class="badge ' + d.status + '">' + d.status + '</span></div>' +
+      '<div class="sub">' + escapeHtml(d.ObservationDate) + ' — ' + escapeHtml(d.ObservationLocation) + '</div>';
+    row.onclick = function() { selectEntry(d.id, false); };
+    listEl.appendChild(row);
+  });
+  if (filtered.length > renderLimit) {
+    const btn = document.createElement('button');
+    btn.id = 'loadmore';
+    btn.textContent = 'Load ' + Math.min(200, filtered.length - renderLimit) + ' more (' + (filtered.length - renderLimit) + ' remaining)';
+    btn.onclick = function() { renderLimit += 200; renderList(); };
+    listEl.appendChild(btn);
+  }
+}
+
+function selectEntry(id, fromMap) {
+  selectedId = id;
+  const d = byId[id];
+  renderList();
+  renderDetail(id);
+  if (d.lat != null && d.lon != null) {
+    map.setView([d.lat, d.lon], Math.max(map.getZoom(), 16), { animate: true });
+    const m = markerById[id];
+    if (m) { m.openTooltip(); }
+  }
+  if (!fromMap) {
+    const row = document.querySelector('.row.selected');
+    if (row) row.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function renderDetail(id) {
+  const d = byId[id];
+  const el = document.getElementById('detail');
+  el.classList.remove('empty');
+  const coordsText = (d.lat != null) ? d.lat.toFixed(5) + ', ' + d.lon.toFixed(5) : '(none — needs placement)';
+  el.innerHTML =
+    '<h2>' + escapeHtml(d.CommonName) + ' <span class="badge ' + d.status + '">' + d.status + '</span></h2>' +
+    '<div class="sci">' + escapeHtml(d.ScientificName || '') + '</div>' +
+    '<div class="field"><b>Observer:</b>' + escapeHtml(d.Observer) + '</div>' +
+    '<div class="field"><b>Date/Time:</b>' + escapeHtml(d.ObservationDate) + ' ' + escapeHtml(d.ObservationTime || '') + '</div>' +
+    '<div class="field"><b>Location text:</b>' + escapeHtml(d.ObservationLocation) + '</div>' +
+    '<div class="field"><b>Coordinates:</b>' + coordsText + '</div>' +
+    (d.status === 'excluded' ? '<div class="field" style="color:var(--gray)">Hidden from the map. Click Confirm, Flag, or Set on map below to bring it back.</div>' : '') +
+    '<div id="detailActions">' +
+      '<button id="btnConfirm">✅ Confirm</button>' +
+      '<button id="btnEditMap">📍 Set on map</button>' +
+      '<button id="btnFlag">🚩 Flag for review</button>' +
+      '<button id="btnIgnore">🚫 Ignore (hide from map)</button>' +
+    '</div>' +
+    '<div id="latlonEdit">' +
+      '<input id="latInput" type="text" placeholder="lat" value="' + (d.lat != null ? d.lat.toFixed(6) : '') + '">' +
+      '<input id="lonInput" type="text" placeholder="lon" value="' + (d.lon != null ? d.lon.toFixed(6) : '') + '">' +
+      '<button id="btnSetLatLon">Set</button>' +
+    '</div>';
+
+  document.getElementById('btnConfirm').onclick = function() {
+    d.status = 'confirmed'; persist(); rebuildMarkers(); renderStats(); renderList(); renderDetail(id);
+  };
+  document.getElementById('btnEditMap').onclick = function() { startPlacement(id); };
+  document.getElementById('btnFlag').onclick = function() {
+    d.status = 'unplaced'; d.lat = null; d.lon = null;
+    persist(); rebuildMarkers(); renderStats(); renderList(); renderDetail(id);
+  };
+  document.getElementById('btnIgnore').onclick = function() {
+    // Ignored points keep their coordinates (so "un-ignoring" later via
+    // Confirm/Set on map doesn't lose the placement) but are hidden from the
+    // map and excluded from any future generate_maps.py build.
+    d.status = 'excluded';
+    persist(); rebuildMarkers(); renderStats(); renderList(); renderDetail(id);
+  };
+  document.getElementById('btnSetLatLon').onclick = function() {
+    const lat = parseFloat(document.getElementById('latInput').value);
+    const lon = parseFloat(document.getElementById('lonInput').value);
+    if (isNaN(lat) || isNaN(lon)) { alert('Enter valid numbers for lat and lon'); return; }
+    d.lat = lat; d.lon = lon; d.status = 'corrected';
+    persist(); rebuildMarkers(); renderStats(); renderList(); renderDetail(id);
+    map.setView([lat, lon], Math.max(map.getZoom(), 16));
+  };
+}
+
+document.getElementById('search').addEventListener('input', function(e) {
+  currentSearch = e.target.value.trim().toLowerCase();
+  renderLimit = 200;
+  renderList();
+});
+
+// ---- Export ----
+function csvEscape(v) {
+  v = (v === null || v === undefined) ? '' : String(v);
+  if (/[",\n]/.test(v)) { v = '"' + v.replace(/"/g, '""') + '"'; }
+  return v;
+}
+document.getElementById('exportBtn').onclick = function() {
+  const cols = ['WPPostId','Observer','ObservationDate','ObservationTime','ObservationLocation','CommonName',
+                'ScientificName','Genus','Species','Latitude','Longitude','ReviewStatus','NeedsManualReview'];
+  const lines = [cols.join(',')];
+  DATA.forEach(function(d) {
+    const needsReview = (d.status === 'unplaced') ? 'YES' : '';
+    const row = [
+      d.WPPostId || '', d.Observer, d.ObservationDate, d.ObservationTime, d.ObservationLocation, d.CommonName,
+      d.ScientificName, d.Genus, d.Species,
+      d.lat != null ? d.lat.toFixed(6) : '', d.lon != null ? d.lon.toFixed(6) : '',
+      d.status, needsReview
+    ].map(csvEscape);
+    lines.push(row.join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'sharon_sightings_reviewed.csv';
+  a.click();
+};
+
+document.getElementById('resetBtn').onclick = function() {
+  if (!confirm('This will discard all confirmations and corrections you\'ve made in this browser. Continue?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+};
+
+// ---- init ----
+renderFilters();
+renderStats();
+renderList();
+</script>
+</body>
+</html>

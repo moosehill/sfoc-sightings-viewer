@@ -1,0 +1,2 @@
+requests>=2.31
+pillow>=10.0     # only needed for scripts/check_photo_gps.py

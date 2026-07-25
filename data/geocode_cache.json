@@ -1,0 +1,583 @@
+{
+ "104 Mountain St, Sharon, MA": {
+  "lat": 42.1045444,
+  "lon": -71.1621057,
+  "municipality": "Sharon"
+ },
+ "14 Paul Revere Rd, Sharon, MA": {
+  "lat": 42.1129054,
+  "lon": -71.1689402,
+  "municipality": "Sharon"
+ },
+ "147 Wolomolopoag St, Sharon, MA": {
+  "lat": 42.0927823,
+  "lon": -71.2048159,
+  "municipality": "Sharon"
+ },
+ "154 Wolomolopoag St, Sharon, MA": {
+  "lat": 42.093526,
+  "lon": -71.2057108,
+  "municipality": "Sharon"
+ },
+ "155 Billings St, Sharon, MA": {
+  "lat": 42.121004,
+  "lon": -71.1679653,
+  "municipality": "Sharon"
+ },
+ "16 High Plain St, Sharon, MA": {
+  "lat": 42.1437576,
+  "lon": -71.20128,
+  "municipality": "Sharon"
+ },
+ "161 Upland Street, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Worcester",
+  "note": "WRONG MUNICIPALITY - needs retry"
+ },
+ "24 Pine St, Sharon, MA": {
+  "lat": 42.1109416,
+  "lon": -71.2292074,
+  "municipality": "Sharon"
+ },
+ "280 Mountain Street, Sharon, MA": {
+  "lat": 42.0939396,
+  "lon": -71.1564293,
+  "municipality": "Sharon"
+ },
+ "281 Mountain St, Sharon, MA": {
+  "lat": 42.0943086,
+  "lon": -71.1574106,
+  "municipality": "Sharon"
+ },
+ "282 Mountain Street, Sharon, MA": {
+  "lat": 42.0934986,
+  "lon": -71.1563385,
+  "municipality": "Sharon"
+ },
+ "284 Mountain Street, Sharon, MA": {
+  "lat": 42.093035,
+  "lon": -71.1560731,
+  "municipality": "Sharon"
+ },
+ "302 Mansfield St, Sharon, MA": {
+  "lat": 42.0611472,
+  "lon": -71.1776054,
+  "municipality": "Sharon"
+ },
+ "302 Mansfield Street, Sharon, MA": {
+  "lat": 42.0611472,
+  "lon": -71.1776054,
+  "municipality": "Sharon"
+ },
+ "302-296 Mansfield St, Sharon, MA": {
+  "lat": 42.0611472,
+  "lon": -71.1776054,
+  "municipality": "Sharon"
+ },
+ "359 Mansfield Street, Sharon, MA": {
+  "lat": 42.0577919,
+  "lon": -71.1780852,
+  "municipality": "Sharon"
+ },
+ "45 Furnace St, Sharon, MA": {
+  "lat": 42.0909775,
+  "lon": -71.2070547,
+  "municipality": "Sharon"
+ },
+ "5 Tisdale Road, Sharon, MA": {
+  "lat": 42.0989013,
+  "lon": -71.1624397,
+  "municipality": "Sharon"
+ },
+ "580 Mountain St, Sharon, MA": {
+  "lat": 42.0800494,
+  "lon": -71.1485671,
+  "municipality": "Sharon"
+ },
+ "580 Mountain Street, Sharon, MA": {
+  "lat": 42.0800494,
+  "lon": -71.1485671,
+  "municipality": "Sharon"
+ },
+ "66 N. Main Street, Sharon, MA": {
+  "lat": 42.1264239,
+  "lon": -71.1781034,
+  "municipality": "Sharon"
+ },
+ "76 Edge Hill Rd, Sharon, MA": {
+  "lat": 42.1475708,
+  "lon": -71.1930623,
+  "municipality": "Sharon"
+ },
+ "Agawam Road & Chase Drive, Sharon, MA": {
+  "lat": 42.0893359,
+  "lon": -71.1959017,
+  "municipality": "Sharon"
+ },
+ "Along the dirt road, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Holden"
+ },
+ "Ames Street, Sharon, MA": {
+  "lat": 42.1090655,
+  "lon": -71.1744598,
+  "municipality": "Sharon"
+ },
+ "Arboro Drive, Sharon, MA": {
+  "lat": 42.1090655,
+  "lon": -71.1695579,
+  "municipality": "Sharon"
+ },
+ "Bay Road & Wilshire Drive, Sharon, MA": {
+  "lat": 42.117387,
+  "lon": -71.13763,
+  "municipality": "Sharon"
+ },
+ "Bay Road, Sharon, MA": {
+  "lat": 42.1349729,
+  "lon": -71.1501254,
+  "municipality": "Sharon"
+ },
+ "Bayberry Drive, Sharon, MA": {
+  "lat": 42.1352348,
+  "lon": -71.1522725,
+  "municipality": "Sharon"
+ },
+ "Beach Street & Harding Street, Sharon, MA": {
+  "lat": 42.1065734,
+  "lon": -71.1845004,
+  "municipality": "Sharon"
+ },
+ "Beach Street, Sharon, MA": {
+  "lat": 42.1084291,
+  "lon": -71.1815815,
+  "municipality": "Sharon"
+ },
+ "Belcher St, Sharon, MA": {
+  "lat": 42.13132,
+  "lon": -71.15364,
+  "municipality": "Sharon"
+ },
+ "Belcher Street, Sharon, MA": {
+  "lat": 42.1310916,
+  "lon": -71.1538146,
+  "municipality": "Sharon"
+ },
+ "Billings Street, Sharon, MA": {
+  "lat": 42.1212629,
+  "lon": -71.1685606,
+  "municipality": "Sharon"
+ },
+ "Bishop Road, Sharon, MA": {
+  "lat": 42.10803,
+  "lon": -71.14059,
+  "municipality": "Sharon"
+ },
+ "Borderland State Park, Sharon, MA": {
+  "lat": 42.0671,
+  "lon": -71.1567,
+  "municipality": "Sharon",
+  "note": "kept earlier verified landmark coords, TomTom match was bad (Cedar Park Rd)"
+ },
+ "Briggs Pond, Sharon, MA": {
+  "lat": 42.0758177,
+  "lon": -71.1400387,
+  "municipality": "Sharon"
+ },
+ "Brook Road, Sharon, MA": {
+  "lat": 42.1258902,
+  "lon": -71.1686075,
+  "municipality": "Sharon"
+ },
+ "Car Shop Pond, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom match unreliable (Grape Shot Rd & Gavins Pond Rd) - leave flagged"
+ },
+ "Chase Drive & East Foxboro Street, Sharon, MA": {
+  "lat": 42.1120532,
+  "lon": -71.1892838,
+  "municipality": "Sharon",
+  "note": "TomTom only returned E Foxboro St alone, used as proxy"
+ },
+ "Cheryl Drive, Sharon, MA": {
+  "lat": 42.132967,
+  "lon": -71.1677856,
+  "municipality": "Sharon"
+ },
+ "Chessman Drive, Sharon, MA": {
+  "lat": 42.10802,
+  "lon": -71.13636,
+  "municipality": "Sharon"
+ },
+ "Coach Lane, Sharon, MA": {
+  "lat": 42.0846,
+  "lon": -71.1404,
+  "municipality": "Sharon"
+ },
+ "Deborah Sampson & Billings, Sharon, MA": {
+  "lat": 42.121104,
+  "lon": -71.163167,
+  "municipality": "Sharon"
+ },
+ "Deborah Sampson Park, Sharon, MA": {
+  "lat": 42.1100204,
+  "lon": -71.1890251,
+  "municipality": "Sharon"
+ },
+ "Deborah Sampson Street, Sharon, MA": {
+  "lat": 42.11879,
+  "lon": -71.16608,
+  "municipality": "Sharon"
+ },
+ "Devil's Rock, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom returned only town centroid - not precise, leave flagged"
+ },
+ "East Foxboro Street, Sharon, MA": {
+  "lat": 42.1120532,
+  "lon": -71.1892838,
+  "municipality": "Sharon"
+ },
+ "Everett Street, Sharon, MA": {
+  "lat": 42.1285237,
+  "lon": -71.1928212,
+  "municipality": "Sharon"
+ },
+ "Fales Road, Sharon, MA": {
+  "lat": 42.1377357,
+  "lon": -71.1892322,
+  "municipality": "Sharon"
+ },
+ "Farnham Road, Sharon, MA": {
+  "lat": 42.11267,
+  "lon": -71.19229,
+  "municipality": "Sharon"
+ },
+ "Furnace Street, Sharon, MA": {
+  "lat": 42.085665,
+  "lon": -71.207352,
+  "municipality": "Sharon"
+ },
+ "Gavins Pond Road, Sharon, MA": {
+  "lat": 42.08625,
+  "lon": -71.21584,
+  "municipality": "Sharon"
+ },
+ "Gorwin Drive, Sharon, MA": {
+  "lat": 42.087244,
+  "lon": -71.1694975,
+  "municipality": "Sharon"
+ },
+ "Hammershop Pond, Sharon, MA": {
+  "lat": 42.11764,
+  "lon": -71.17709,
+  "municipality": "Sharon",
+  "note": "generic Pond Street match, moderate confidence proxy"
+ },
+ "Harding Street & East Foxboro Street, Sharon, MA": {
+  "lat": 42.1067,
+  "lon": -71.18927,
+  "municipality": "Sharon"
+ },
+ "Harris Pond, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom matched Blackstone MA (wrong town) - leave flagged"
+ },
+ "High Plain Street & Norwood Street, Sharon, MA": {
+  "lat": 42.1445208,
+  "lon": -71.1992381,
+  "municipality": "Sharon"
+ },
+ "High Plain Street, Sharon, MA": {
+  "lat": 42.1398902,
+  "lon": -71.2124357,
+  "municipality": "Sharon"
+ },
+ "High Street, Sharon, MA": {
+  "lat": 42.1236475,
+  "lon": -71.1755606,
+  "municipality": "Sharon"
+ },
+ "King Philip's Rock, Sharon, MA": {
+  "lat": 42.0832163,
+  "lon": -71.1903928,
+  "municipality": "Sharon",
+  "note": "matched King Philip Road, good proxy"
+ },
+ "Knifeshop Pond, Sharon, MA": {
+  "lat": 42.11764,
+  "lon": -71.17709,
+  "municipality": "Sharon",
+  "note": "generic Pond Street match, moderate confidence proxy"
+ },
+ "Lakeview Street & Morse Street, Sharon, MA": {
+  "lat": 42.0882352,
+  "lon": -71.1759206,
+  "municipality": "Sharon"
+ },
+ "Lakeview Street, Sharon, MA": {
+  "lat": 42.0921786,
+  "lon": -71.1785656,
+  "municipality": "Sharon"
+ },
+ "Lee Road, Sharon, MA": {
+  "lat": 42.10483,
+  "lon": -71.20126,
+  "municipality": "Sharon"
+ },
+ "Mann's Pond, Sharon, MA": {
+  "lat": 42.11764,
+  "lon": -71.17709,
+  "municipality": "Sharon",
+  "note": "generic Pond Street match, moderate confidence proxy"
+ },
+ "Mansfield Street, Sharon, MA": {
+  "lat": 42.0743859,
+  "lon": -71.1775855,
+  "municipality": "Sharon"
+ },
+ "Maskwonicut Street, Sharon, MA": {
+  "lat": 42.13446,
+  "lon": -71.17908,
+  "municipality": "Sharon"
+ },
+ "Massapoag Avenue, Sharon, MA": {
+  "lat": 42.07092,
+  "lon": -71.17232,
+  "municipality": "Sharon"
+ },
+ "Massapoag Brook trail between Ames St, Sharon, MA": {
+  "lat": 42.1152562,
+  "lon": -71.1744464,
+  "municipality": "Sharon"
+ },
+ "Mattakesett Circle, Sharon, MA": {
+  "lat": 42.0677544,
+  "lon": -71.1736141,
+  "municipality": "Sharon"
+ },
+ "Moose Hill Audubon Wildlife Sanctuary, Sharon, MA": {
+  "lat": 42.12222,
+  "lon": -71.20861,
+  "municipality": "Sharon",
+  "note": "reused original verified gazetteer coords, no API call needed"
+ },
+ "Moose Hill Parkway, Sharon, MA": {
+  "lat": 42.1224486,
+  "lon": -71.1972779,
+  "municipality": "Sharon"
+ },
+ "Moose Hill St, Sharon, MA": {
+  "lat": 42.121972,
+  "lon": -71.207756,
+  "municipality": "Sharon"
+ },
+ "Moose Hill Street, Sharon, MA": {
+  "lat": 42.121972,
+  "lon": -71.207756,
+  "municipality": "Sharon"
+ },
+ "Morse Street, Sharon, MA": {
+  "lat": 42.0925043,
+  "lon": -71.1673474,
+  "municipality": "Sharon"
+ },
+ "Mountain St, Sharon, MA": {
+  "lat": 42.091369,
+  "lon": -71.1544,
+  "municipality": "Sharon"
+ },
+ "Mountain Street & Bay Road, Sharon, MA": {
+  "lat": 42.09087,
+  "lon": -71.152983,
+  "municipality": "Sharon",
+  "note": "TomTom matched wrong town (North Easton) for the intersection - fell back to Mountain Street alone"
+ },
+ "Mountain Street, Sharon, MA": {
+  "lat": 42.09087,
+  "lon": -71.152983,
+  "municipality": "Sharon"
+ },
+ "Norwood Street, Sharon, MA": {
+  "lat": 42.1335885,
+  "lon": -71.1878744,
+  "municipality": "Sharon"
+ },
+ "Old Post Road, Sharon, MA": {
+  "lat": 42.1215486,
+  "lon": -71.2297437,
+  "municipality": "Sharon"
+ },
+ "Osprey Road, Sharon, MA": {
+  "lat": 42.0903041,
+  "lon": -71.1888825,
+  "municipality": "Sharon"
+ },
+ "Paul Revere Road, Sharon, MA": {
+  "lat": 42.1127159,
+  "lon": -71.1691234,
+  "municipality": "Sharon"
+ },
+ "Pierce's Hill, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom fuzzy-matched Edge Hill Road, not trustworthy - leave flagged"
+ },
+ "Pilgrim Drive, Sharon, MA": {
+  "lat": 42.0974358,
+  "lon": -71.1856971,
+  "municipality": "Sharon"
+ },
+ "Pine Grove Avenue, Sharon, MA": {
+  "lat": 42.1280397,
+  "lon": -71.1862335,
+  "municipality": "Sharon"
+ },
+ "Pine Street, Sharon, MA": {
+  "lat": 42.1099007,
+  "lon": -71.2298365,
+  "municipality": "Sharon"
+ },
+ "Quincy Street, Sharon, MA": {
+  "lat": 42.1125589,
+  "lon": -71.1725403,
+  "municipality": "Sharon"
+ },
+ "Rock Ridge Cemetery, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom matched Kentucky - leave flagged"
+ },
+ "Rock where Lakeview Field Trail & Horizon, Sharon, MA": {
+  "lat": 42.085276,
+  "lon": -71.173664,
+  "municipality": "Sharon"
+ },
+ "Sandy Ridge Circle, Sharon, MA": {
+  "lat": 42.1123886,
+  "lon": -71.19593,
+  "municipality": "Sharon"
+ },
+ "Sawmill Pond, Sharon, MA": {
+  "lat": 42.13836,
+  "lon": -71.17452,
+  "municipality": "Sharon"
+ },
+ "School Street, Sharon, MA": {
+  "lat": 42.12581,
+  "lon": -71.1786365,
+  "municipality": "Sharon"
+ },
+ "Sharon (MBTA) Station, MA": {
+  "lat": 42.1231232,
+  "lon": -71.1810152,
+  "municipality": "Sharon"
+ },
+ "Sharon Community Center, MA": {
+  "lat": 42.0953987,
+  "lon": -71.1721851,
+  "municipality": "Sharon"
+ },
+ "Sharon Historical Society, MA": {
+  "lat": 42.1236475,
+  "lon": -71.1755606,
+  "municipality": "Sharon",
+  "note": "TomTom matched Washington NH - used High Street, Sharon coords instead (16 High St per source data)"
+ },
+ "South Pleasant Street, Sharon, MA": {
+  "lat": 42.1207443,
+  "lon": -71.1823895,
+  "municipality": "Sharon"
+ },
+ "South Walpole Street, Sharon, MA": {
+  "lat": 42.1064287,
+  "lon": -71.226962,
+  "municipality": "Sharon"
+ },
+ "Tolman Street, Sharon, MA": {
+  "lat": 42.12024,
+  "lon": -71.17537,
+  "municipality": "Sharon"
+ },
+ "Trowel Shop Pond, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom matched Hanover MA farm road, not trustworthy - leave flagged"
+ },
+ "Under high tension wires across the street, Sharon, MA": {
+  "lat": 42.123657,
+  "lon": -71.175554,
+  "municipality": "Sharon"
+ },
+ "Under the power lines across the street, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Lawrence"
+ },
+ "Upland Street, Sharon, MA": {
+  "lat": 42.1268199,
+  "lon": -71.1867421,
+  "municipality": "Sharon"
+ },
+ "Ward's Berry Farm, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "note": "TomTom matched Hanover MA - leave flagged"
+ },
+ "Wilshire Drive, Sharon, MA": {
+  "lat": 42.1154489,
+  "lon": -71.148196,
+  "municipality": "Sharon"
+ },
+ "Wolomolopoag Pond, Sharon, MA": {
+  "lat": 42.11764,
+  "lon": -71.17709,
+  "municipality": "Sharon",
+  "note": "generic Pond Street match, moderate confidence proxy"
+ },
+ "Wolomolopoag St, Sharon, MA": {
+  "lat": 42.09204,
+  "lon": -71.203,
+  "municipality": "Sharon"
+ },
+ "Wolomolopoag Street, Sharon, MA": {
+  "lat": 42.09204,
+  "lon": -71.203,
+  "municipality": "Sharon"
+ },
+ "ag Brook trail between Ames St. & Mann, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Concord"
+ },
+ "beneath the power lines across the street, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Lawrence"
+ },
+ "under high tension lines across the street, Sharon, MA": {
+  "lat": 42.123657,
+  "lon": -71.175554,
+  "municipality": "Sharon"
+ },
+ "under high tension wires across the street, Sharon, MA": {
+  "lat": 42.123657,
+  "lon": -71.175554,
+  "municipality": "Sharon"
+ },
+ "under power lines across the street, Sharon, MA": {
+  "lat": null,
+  "lon": null,
+  "municipality": "Lawrence"
+ },
+ "under the high tension wires across the street, Sharon, MA": {
+  "lat": 42.123657,
+  "lon": -71.175554,
+  "municipality": "Sharon"
+ }
+}

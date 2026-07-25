@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sharon Sightings Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<style>
+  :root {
+    --blue: #2563eb; --green: #16a34a; --purple: #7c3aed; --gray: #6b7280;
+    --bg: #f8fafc; --panel: #ffffff; --border: #e2e8f0; --text: #1e293b; --muted: #64748b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg); }
+  #app { display: flex; height: 100vh; width: 100vw; }
+  #map { flex: 1 1 auto; height: 100%; }
+  #sidebar { width: 380px; flex: 0 0 380px; height: 100%; display: flex; flex-direction: column; background: var(--panel); border-left: 1px solid var(--border); }
+
+  #header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); }
+  #header h1 { font-size: 15px; margin: 0 0 8px; }
+  #stats { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
+  .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; }
+  .stat b { display: block; font-size: 13px; }
+
+  #toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border); }
+  #search { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
+
+  #list { flex: 1 1 auto; overflow-y: auto; }
+  .row { padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
+  .row:hover { background: #f1f5f9; }
+  .row.selected { background: #eff6ff; border-left: 3px solid var(--blue); }
+  .row .name { font-weight: 600; }
+  .row .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  #loadmore { display: block; width: 100%; padding: 10px; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-size: 12px; }
+
+  #detail { border-top: 2px solid var(--border); padding: 12px 14px; background: #fbfcfe; max-height: 40vh; overflow-y: auto; }
+  #detail.empty { color: var(--muted); font-size: 12.5px; }
+  #detail h2 { font-size: 14px; margin: 0 0 2px; }
+  #detail .sci { font-style: italic; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .field { font-size: 12px; margin-bottom: 4px; }
+  .field b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+
+  .leaflet-tooltip.sfoc-tip { font-size: 12px; padding: 5px 8px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+  <div id="sidebar">
+    <div id="header">
+      <h1>Sharon Sightings Map</h1>
+      <div id="stats"></div>
+    </div>
+    <div id="toolbar">
+      <input id="search" type="text" placeholder="Search species or location…" />
+    </div>
+    <div id="list"></div>
+    <div id="detail" class="empty">Select a point on the map or from the list to see details.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+// Read-only viewer. This intentionally has no localStorage / editing code --
+// it just displays whatever was baked into DATA at generation time.
+const DATA_RAW = {{DATA_JSON}};
+const DATA = DATA_RAW
+  .filter(function(r) { return r.Latitude !== "" && r.Longitude !== ""; })
+  .map(function(r) {
+    return Object.assign({}, r, {
+      lat: parseFloat(r.Latitude),
+      lon: parseFloat(r.Longitude),
+    });
+  });
+const byId = {};
+DATA.forEach(function(d){ byId[d.id] = d; });
+
+// ---- Map setup ----
+const map = L.map('map', { preferCanvas: true }).setView([42.1237, -71.1787], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const cluster = L.markerClusterGroup({
+  maxClusterRadius: 40,
+  spiderfyOnMaxZoom: true,
+  disableClusteringAtZoom: null,
+  zoomToBoundsOnClick: true
+});
+map.addLayer(cluster);
+
+const markerById = {};
+
+function makeMarker(d) {
+  const m = L.circleMarker([d.lat, d.lon], {
+    radius: 7, weight: 2, color: '#ffffff', fillColor: '#2563eb', fillOpacity: 0.95
+  });
+  m.bindTooltip(tooltipHtml(d), { className: 'sfoc-tip', direction: 'top', offset: [0, -6] });
+  m.on('click', function() { selectEntry(d.id, true); });
+  return m;
+}
+function tooltipHtml(d) {
+  return '<b>' + escapeHtml(d.CommonName) + '</b><br>' + escapeHtml(d.ObservationLocation) +
+         '<br><span style="color:#888">' + escapeHtml(d.ObservationDate) + '</span>';
+}
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+DATA.forEach(function(d) {
+  const m = makeMarker(d);
+  markerById[d.id] = m;
+  cluster.addLayer(m);
+});
+
+// ---- Sidebar: search / list ----
+let currentSearch = '';
+let renderLimit = 200;
+let selectedId = null;
+
+function renderStats() {
+  const el = document.getElementById('stats');
+  el.innerHTML = '<div class="stat"><b>' + DATA.length + '</b>sightings mapped</div>';
+}
+
+function matchesSearch(d) {
+  if (!currentSearch) return true;
+  const hay = (d.CommonName + ' ' + d.ObservationLocation + ' ' + d.ScientificName + ' ' + d.Observer).toLowerCase();
+  return hay.indexOf(currentSearch) !== -1;
+}
+
+function renderList() {
+  const listEl = document.getElementById('list');
+  listEl.innerHTML = '';
+  const filtered = DATA.filter(matchesSearch);
+  const toShow = filtered.slice(0, renderLimit);
+  toShow.forEach(function(d) {
+    const row = document.createElement('div');
+    row.className = 'row' + (d.id === selectedId ? ' selected' : '');
+    row.innerHTML = '<div class="name">' + escapeHtml(d.CommonName) + '</div>' +
+      '<div class="sub">' + escapeHtml(d.ObservationDate) + ' — ' + escapeHtml(d.ObservationLocation) + '</div>';
+    row.onclick = function() { selectEntry(d.id, false); };
+    listEl.appendChild(row);
+  });
+  if (filtered.length > renderLimit) {
+    const btn = document.createElement('button');
+    btn.id = 'loadmore';
+    btn.textContent = 'Load ' + Math.min(200, filtered.length - renderLimit) + ' more (' + (filtered.length - renderLimit) + ' remaining)';
+    btn.onclick = function() { renderLimit += 200; renderList(); };
+    listEl.appendChild(btn);
+  }
+}
+
+function selectEntry(id, fromMap) {
+  selectedId = id;
+  const d = byId[id];
+  renderList();
+  renderDetail(id);
+  map.setView([d.lat, d.lon], Math.max(map.getZoom(), 16), { animate: true });
+  const m = markerById[id];
+  if (m) { m.openTooltip(); }
+  if (!fromMap) {
+    const row = document.querySelector('.row.selected');
+    if (row) row.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function renderDetail(id) {
+  const d = byId[id];
+  const el = document.getElementById('detail');
+  el.classList.remove('empty');
+  el.innerHTML =
+    '<h2>' + escapeHtml(d.CommonName) + '</h2>' +
+    '<div class="sci">' + escapeHtml(d.ScientificName || '') + '</div>' +
+    '<div class="field"><b>Observer:</b>' + escapeHtml(d.Observer) + '</div>' +
+    '<div class="field"><b>Date/Time:</b>' + escapeHtml(d.ObservationDate) + ' ' + escapeHtml(d.ObservationTime || '') + '</div>' +
+    '<div class="field"><b>Location:</b>' + escapeHtml(d.ObservationLocation) + '</div>';
+}
+
+document.getElementById('search').addEventListener('input', function(e) {
+  currentSearch = e.target.value.trim().toLowerCase();
+  renderLimit = 200;
+  renderList();
+});
+
+// ---- init ----
+renderStats();
+renderList();
+</script>
+</body>
+</html>
