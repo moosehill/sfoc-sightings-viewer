@@ -25,9 +25,17 @@
   .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; }
   .stat b { display: block; font-size: 13px; }
 
+  #detail { border-bottom: 2px solid var(--border); padding: 12px 14px; background: #fbfcfe; max-height: 34vh; overflow-y: auto; flex: 0 0 auto; }
+  #detail.empty { color: var(--muted); font-size: 12.5px; text-align: center; padding: 22px 14px; }
+  #detail h2 { font-size: 14px; margin: 0 0 2px; }
+  #detail .sci { font-style: italic; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
+  .field { font-size: 12px; margin-bottom: 4px; }
+  .field b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+
   #toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border); }
   #search { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
 
+  #listHeader { padding: 10px 14px 6px; font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
   #list { flex: 1 1 auto; overflow-y: auto; }
   .row { padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
   .row:hover { background: #f1f5f9; }
@@ -36,22 +44,15 @@
   .row .sub { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
   #loadmore { display: block; width: 100%; padding: 10px; border: none; background: var(--bg); color: var(--muted); cursor: pointer; font-size: 12px; }
 
-  #detail { border-top: 2px solid var(--border); padding: 12px 14px; background: #fbfcfe; max-height: 40vh; overflow-y: auto; }
-  #detail.empty { color: var(--muted); font-size: 12.5px; }
-  #detail h2 { font-size: 14px; margin: 0 0 2px; }
-  #detail .sci { font-style: italic; color: var(--muted); font-size: 12px; margin-bottom: 8px; }
-  .field { font-size: 12px; margin-bottom: 4px; }
-  .field b { color: var(--muted); font-weight: 600; margin-right: 4px; }
-
   .leaflet-tooltip.sfoc-tip { font-size: 12px; padding: 5px 8px; }
 
   /* Phones/narrow screens: stack map above the sidebar instead of side-by-side,
      otherwise a fixed-width sidebar eats almost the whole screen. */
   @media (max-width: 700px) {
     #app { flex-direction: column; height: 100dvh; }
-    #map { flex: 1 1 48dvh; height: 48dvh; width: 100%; min-height: 220px; }
+    #map { flex: 1 1 42dvh; height: 42dvh; width: 100%; min-height: 200px; }
     #sidebar { width: 100%; flex: 1 1 auto; min-height: 0; border-left: none; border-top: 1px solid var(--border); }
-    #detail { max-height: 32dvh; }
+    #detail { max-height: 26dvh; }
   }
 </style>
 </head>
@@ -64,11 +65,12 @@
       <div class="date-range">{{DATE_RANGE}}</div>
       <div id="stats"></div>
     </div>
+    <div id="detail" class="empty">Click on a data point for more information.</div>
     <div id="toolbar">
       <input id="search" type="text" placeholder="Search species or location…" />
     </div>
+    <div id="listHeader"></div>
     <div id="list"></div>
-    <div id="detail" class="empty">Select a point on the map or from the list to see details.</div>
   </div>
 </div>
 
@@ -77,6 +79,19 @@
 <script>
 // Read-only viewer. This intentionally has no localStorage / editing code --
 // it just displays whatever was baked into DATA at generation time.
+//
+// Sidebar behavior:
+//   - The detail pane at the top always starts with a prompt, and only shows
+//     a full record once something is actually clicked.
+//   - The list below defaults to whatever's within the current map viewport,
+//     and stays in sync as you pan/zoom around.
+//   - Clicking a cluster or an individual point narrows the list to just
+//     that cluster's (or that one point's) sightings -- this scoping sticks
+//     until you pan/zoom the map yourself, at which point it reverts to
+//     viewport mode again.
+//   - Typing in search filters within whatever's currently shown (the
+//     viewport, or an active cluster/point scope) -- it does not search
+//     sightings outside the current view.
 const DATA_RAW = {{DATA_JSON}};
 const DATA = DATA_RAW
   .filter(function(r) { return r.Latitude !== "" && r.Longitude !== ""; })
@@ -106,12 +121,23 @@ map.addLayer(cluster);
 
 const markerById = {};
 
+const DEFAULT_STYLE = { radius: 7, weight: 2, color: '#ffffff', fillColor: '#2563eb', fillOpacity: 0.95 };
+const HIGHLIGHT_STYLE = { radius: 11, weight: 3, color: '#f59e0b', fillColor: '#2563eb', fillOpacity: 1 };
+
 function makeMarker(d) {
-  const m = L.circleMarker([d.lat, d.lon], {
-    radius: 7, weight: 2, color: '#ffffff', fillColor: '#2563eb', fillOpacity: 0.95
-  });
+  const m = L.circleMarker([d.lat, d.lon], Object.assign({
+    // L.circleMarker is a Path layer, which by default bubbles mouse events
+    // up to the map. Leaflet.markercluster listens for map clicks to
+    // auto-collapse any open spiderfy, so without this, clicking a
+    // spiderfied point closes the whole cloud it belongs to.
+    bubblingMouseEvents: false
+  }, DEFAULT_STYLE));
+  m.sfocId = d.id;
   m.bindTooltip(tooltipHtml(d), { className: 'sfoc-tip', direction: 'top', offset: [0, -6] });
-  m.on('click', function() { selectEntry(d.id, true); });
+  m.on('click', function(e) {
+    L.DomEvent.stopPropagation(e);
+    selectPoint(d.id, true);
+  });
   return m;
 }
 function tooltipHtml(d) {
@@ -130,61 +156,195 @@ DATA.forEach(function(d) {
   cluster.addLayer(m);
 });
 
-// ---- Sidebar: search / list ----
+// ---- Sidebar state ----
+// viewportIds: recomputed on every map move/zoom -- the default list.
+// explicitScope: set by clicking a cluster or a point; overrides viewportIds
+//   until the user genuinely pans/zooms the map themselves.
+// currentSearch: when non-empty, overrides everything and searches all DATA.
+let viewportIds = [];
+let explicitScope = null;
 let currentSearch = '';
-let renderLimit = 200;
 let selectedId = null;
+let renderLimit = 200;
+
+// Cluster clicks and our own point-selection code both trigger an animated
+// map pan/zoom (zoomToBoundsOnClick, and map.setView respectively), which
+// fires 'moveend' just like a real user drag or scroll would. Without this
+// flag, that programmatic movement would immediately wipe out the very
+// cluster/point scope the click was meant to set. Set it right before
+// triggering such a move; the next moveend consumes it and resets itself.
+let suppressViewportReset = false;
+function suppressNextViewportReset() {
+  suppressViewportReset = true;
+  // Safety net: if for some reason no moveend arrives to consume the flag
+  // (e.g. the target view was identical to the current one), don't leave it
+  // stuck true and accidentally swallow the user's next real pan/zoom.
+  setTimeout(function() { suppressViewportReset = false; }, 1000);
+}
+
+// The currently-highlighted marker (the one shown in the detail pane, when
+// selected via the sidebar list / zoomToShowLayer). Cleared -- reverted to
+// its normal style -- whenever the user genuinely pans or zooms the map.
+let highlightedId = null;
+function setHighlight(id) {
+  if (highlightedId != null && markerById[highlightedId]) {
+    markerById[highlightedId].setStyle(DEFAULT_STYLE);
+  }
+  highlightedId = id;
+  if (id != null && markerById[id]) {
+    markerById[id].setStyle(HIGHLIGHT_STYLE);
+    if (markerById[id].bringToFront) { markerById[id].bringToFront(); }
+  }
+}
+
+function updateViewportIds() {
+  const bounds = map.getBounds();
+  viewportIds = DATA.filter(function(d) { return bounds.contains([d.lat, d.lon]); })
+                     .map(function(d) { return d.id; });
+}
+updateViewportIds();
+
+map.on('moveend', function() {
+  updateViewportIds();
+  if (suppressViewportReset) {
+    suppressViewportReset = false;
+  } else {
+    explicitScope = null;
+    setHighlight(null);
+  }
+  renderList();
+});
+
+cluster.on('clusterclick', function(e) {
+  const ids = e.layer.getAllChildMarkers().map(function(m) { return m.sfocId; });
+  explicitScope = ids;
+  selectedId = null;
+  setHighlight(null);
+  renderLimit = 200;
+  suppressNextViewportReset();
+  renderList();
+  renderDetail();
+});
+
+// Tracks whichever marker currently has its tooltip programmatically opened,
+// so selecting a new point always closes the previous tooltip first --
+// otherwise tooltips only close on hover-out, and clicking through several
+// points (from the map or the list) would leave every prior one on screen.
+let openTooltipId = null;
+function closeOpenTooltip() {
+  if (openTooltipId != null && markerById[openTooltipId]) {
+    markerById[openTooltipId].closeTooltip();
+  }
+  openTooltipId = null;
+}
+function showTooltip(id) {
+  closeOpenTooltip();
+  const m = markerById[id];
+  if (m) { m.openTooltip(); openTooltipId = id; }
+}
+
+function selectPoint(id, fromMap) {
+  selectedId = id;
+  const inCurrentList = getBaseIds().indexOf(id) !== -1;
+  if (!inCurrentList) {
+    // Directly clicked (or searched to) a point that isn't part of the list
+    // currently shown -- make the list reflect just this one point.
+    explicitScope = [id];
+    currentSearch = '';
+    document.getElementById('search').value = '';
+    renderLimit = 200;
+  }
+  renderList();
+  renderDetail();
+  const m = markerById[id];
+  if (fromMap) {
+    // Already visible on screen (that's how it was clicked) -- just
+    // highlight it, don't move the map. Leaflet.markercluster automatically
+    // collapses any open spiderfied cluster the instant the map pans or
+    // zooms, so re-centering here would close the very cloud of points the
+    // user just clicked into.
+    setHighlight(id);
+    showTooltip(id);
+  } else {
+    // Selected from the sidebar list -- the full record is already shown in
+    // the detail pane, so no map tooltip is needed here (and any tooltip
+    // left open from an earlier map click should be closed). The point
+    // could be hidden inside a cluster anywhere on the map; zoomToShowLayer
+    // zooms in (and spiderfies, if the point is still clustered even at max
+    // zoom) however much is needed to make it individually visible.
+    suppressNextViewportReset();
+    closeOpenTooltip();
+    if (m) {
+      cluster.zoomToShowLayer(m, function() {
+        setHighlight(id);
+      });
+    }
+  }
+}
+
+function matchesSearch(d) {
+  const hay = (d.CommonName + ' ' + d.ObservationLocation + ' ' + d.ScientificName + ' ' + d.Observer).toLowerCase();
+  return hay.indexOf(currentSearch) !== -1;
+}
+
+function getBaseIds() {
+  const base = explicitScope || viewportIds;
+  if (currentSearch) {
+    return base.filter(function(id) { return matchesSearch(byId[id]); });
+  }
+  return base;
+}
 
 function renderStats() {
   const el = document.getElementById('stats');
   el.innerHTML = '<div class="stat"><b>' + DATA.length + '</b>sightings mapped</div>';
 }
 
-function matchesSearch(d) {
-  if (!currentSearch) return true;
-  const hay = (d.CommonName + ' ' + d.ObservationLocation + ' ' + d.ScientificName + ' ' + d.Observer).toLowerCase();
-  return hay.indexOf(currentSearch) !== -1;
+function listHeaderText(count) {
+  if (currentSearch) {
+    return count + (count === 1 ? ' result' : ' results') + ' for “' + currentSearch + '”';
+  }
+  if (explicitScope) {
+    return count + (count === 1 ? ' sighting here' : ' sightings here');
+  }
+  return count + (count === 1 ? ' sighting in view' : ' sightings in view');
 }
 
 function renderList() {
+  const headerEl = document.getElementById('listHeader');
   const listEl = document.getElementById('list');
   listEl.innerHTML = '';
-  const filtered = DATA.filter(matchesSearch);
-  const toShow = filtered.slice(0, renderLimit);
+
+  const ids = getBaseIds();
+  const items = ids.map(function(id) { return byId[id]; }).filter(Boolean);
+  headerEl.textContent = listHeaderText(items.length);
+
+  const toShow = items.slice(0, renderLimit);
   toShow.forEach(function(d) {
     const row = document.createElement('div');
     row.className = 'row' + (d.id === selectedId ? ' selected' : '');
     row.innerHTML = '<div class="name">' + escapeHtml(d.CommonName) + '</div>' +
       '<div class="sub">' + escapeHtml(d.ObservationDate) + ' — ' + escapeHtml(d.ObservationLocation) + '</div>';
-    row.onclick = function() { selectEntry(d.id, false); };
+    row.onclick = function() { selectPoint(d.id, false); };
     listEl.appendChild(row);
   });
-  if (filtered.length > renderLimit) {
+  if (items.length > renderLimit) {
     const btn = document.createElement('button');
     btn.id = 'loadmore';
-    btn.textContent = 'Load ' + Math.min(200, filtered.length - renderLimit) + ' more (' + (filtered.length - renderLimit) + ' remaining)';
+    btn.textContent = 'Load ' + Math.min(200, items.length - renderLimit) + ' more (' + (items.length - renderLimit) + ' remaining)';
     btn.onclick = function() { renderLimit += 200; renderList(); };
     listEl.appendChild(btn);
   }
 }
 
-function selectEntry(id, fromMap) {
-  selectedId = id;
-  const d = byId[id];
-  renderList();
-  renderDetail(id);
-  map.setView([d.lat, d.lon], Math.max(map.getZoom(), 16), { animate: true });
-  const m = markerById[id];
-  if (m) { m.openTooltip(); }
-  if (!fromMap) {
-    const row = document.querySelector('.row.selected');
-    if (row) row.scrollIntoView({ block: 'nearest' });
-  }
-}
-
-function renderDetail(id) {
-  const d = byId[id];
+function renderDetail() {
   const el = document.getElementById('detail');
+  if (selectedId == null) {
+    el.classList.add('empty');
+    el.innerHTML = 'Click on a data point for more information.';
+    return;
+  }
+  const d = byId[selectedId];
   el.classList.remove('empty');
   el.innerHTML =
     '<h2>' + escapeHtml(d.CommonName) + '</h2>' +
@@ -203,6 +363,7 @@ document.getElementById('search').addEventListener('input', function(e) {
 // ---- init ----
 renderStats();
 renderList();
+renderDetail();
 </script>
 </body>
 </html>
