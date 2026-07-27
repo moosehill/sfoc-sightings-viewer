@@ -73,9 +73,17 @@ def build_records(rows):
     for i, r in enumerate(rows):  # stable id = row position in the CSV; never reassigned
         if r.get("ReviewStatus") == "excluded":
             continue
+        wp_post_id = r.get("WPPostId", "")
+        post_url = (r.get("PostUrl") or "").strip()
+        if not post_url and wp_post_id:
+            # Older rows scraped before we captured the real permalink don't
+            # have PostUrl saved. WordPress pages resolve by ID via this
+            # query-string form regardless of slug, so it's a reliable
+            # fallback link to the original sighting post.
+            post_url = f"https://sharonfoc.org/?page_id={wp_post_id}"
         records.append({
             "id": i,
-            "WPPostId": r.get("WPPostId", ""),
+            "WPPostId": wp_post_id,
             "Observer": r["Observer"],
             "ObservationDate": r["ObservationDate"],
             "ObservationTime": r["ObservationTime"],
@@ -87,6 +95,7 @@ def build_records(rows):
             "Latitude": r["Latitude"],
             "Longitude": r["Longitude"],
             "ReviewStatus": r.get("ReviewStatus", "auto"),
+            "PostUrl": post_url,
         })
     return records
 

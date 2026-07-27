@@ -44,6 +44,7 @@ LABEL_ALIASES = [
     ("Observation Date", "ObservationDate"),
     ("Observation Time", "ObservationTime"),
     ("Observation Location", "ObservationLocation"),
+    ("Observation Place", "ObservationLocation"),  # synonym seen on some older posts
     ("Common [Nn]ame", "CommonName"),
     ("Scientific Name", "ScientificName"),
     ("Comments", "Comments"),
@@ -93,13 +94,32 @@ def parse_excerpt(html):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         fields[canon] = text[start:end].strip()
 
+    # A blank (or entirely absent) Observation Location/Place means the
+    # sighting was in town without a more specific place named -- default it
+    # to "Sharon" rather than dropping the post for missing a required field.
+    if not fields.get("ObservationLocation"):
+        fields["ObservationLocation"] = "Sharon"
+
     if not all(fields.get(k) for k in REQUIRED_KEYS):
         return None
 
     return {k: fields.get(k, "") for k in OUTPUT_KEYS}
 
 def fetch_all_sightings(verbose=True):
+    """Returns (results, unparsed_urls).
+
+    results: fully-parsed sightings, as before.
+    unparsed_urls: {WPPostId: PostUrl} for posts whose excerpt didn't match
+        the expected "Observer: ... Observation Date: ..." label format
+        (mostly older posts using a different layout). We can't build a full
+        row for these without the structured fields, but we still know their
+        id and permalink for free from the same API response -- callers can
+        use this to backfill just the original-post link onto existing rows
+        that already have this WPPostId recorded, even though the row can't
+        be created or re-parsed from here.
+    """
     results = []
+    unparsed_urls = {}
     page = 1
     session = requests.Session()
     session.headers["User-Agent"] = USER_AGENT
@@ -125,8 +145,10 @@ def fetch_all_sightings(verbose=True):
                 if verbose:
                     print(f"  [warn] could not parse fields for post {post.get('id')} "
                           f"({post.get('link')})", file=sys.stderr)
+                unparsed_urls[str(post.get("id"))] = post.get("link", "")
                 continue
             fields["WPPostId"] = post["id"]
+            fields["PostUrl"] = post.get("link", "")
             # Genus/Species derived fields
             sci = fields["ScientificName"]
             parts = sci.split()
@@ -140,8 +162,8 @@ def fetch_all_sightings(verbose=True):
             break
         page += 1
         time.sleep(0.2)  # be polite
-    return results
+    return results, unparsed_urls
 
 if __name__ == "__main__":
-    data = fetch_all_sightings()
+    data, _unparsed = fetch_all_sightings()
     json.dump(data, sys.stdout, indent=2, ensure_ascii=False)
