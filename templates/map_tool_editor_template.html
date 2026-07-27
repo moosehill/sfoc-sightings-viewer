@@ -21,6 +21,7 @@
   #header { padding: 12px 14px 10px; border-bottom: 1px solid var(--border); }
   #header h1 { font-size: 15px; margin: 0 0 2px; }
   #header .date-range { font-size: 11.5px; color: var(--muted); margin: 0 0 8px; }
+  #header .sw-version { font-weight: 400; font-size: 10px; color: var(--muted); vertical-align: middle; }
   #stats { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; }
   .stat { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; }
   .stat b { display: block; font-size: 13px; }
@@ -73,7 +74,7 @@
   <div id="placementBanner"></div>
   <div id="sidebar">
     <div id="header">
-      <h1>Sharon Sightings — Location Review</h1>
+      <h1>Sharon Sightings — Location Review <span class="sw-version">build {{SOFTWARE_VERSION}}</span></h1>
       <div class="date-range">{{DATE_RANGE}}</div>
       <div id="stats"></div>
     </div>

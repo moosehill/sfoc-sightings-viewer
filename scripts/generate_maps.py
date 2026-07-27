@@ -21,6 +21,7 @@ import re
 import csv
 import json
 import time
+import hashlib
 from datetime import datetime
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
@@ -103,17 +104,28 @@ def compute_date_range(records):
     return f"{lo.strftime('%b %Y')} - {hi.strftime('%b %Y')}"
 
 
+def software_version(template_source):
+    """Short, stable hash of the template's own source code (not the data).
+    Changes if and only if the template itself changes, so it's a reliable
+    at-a-glance signal for "the tool was updated" vs. "just the data was
+    refreshed" -- unlike a manually-bumped version number, it can't go stale
+    from someone forgetting to bump it."""
+    return hashlib.sha256(template_source.encode("utf-8")).hexdigest()[:7]
+
+
 def render(template_name, out_name, data_json, data_version, date_range):
     with open(os.path.join(TEMPLATES_DIR, template_name), encoding="utf-8") as fh:
         template = fh.read()
+    sw_version = software_version(template)
     out = (template.replace("{{DATA_JSON}}", data_json)
                    .replace("{{DATA_VERSION}}", data_version)
-                   .replace("{{DATE_RANGE}}", date_range))
+                   .replace("{{DATE_RANGE}}", date_range)
+                   .replace("{{SOFTWARE_VERSION}}", sw_version))
     os.makedirs(PUBLIC_DIR, exist_ok=True)
     out_path = os.path.join(PUBLIC_DIR, out_name)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(out)
-    return out_path
+    return out_path, sw_version
 
 
 def main():
@@ -123,15 +135,15 @@ def main():
     data_version = "v" + str(int(time.time()))
     date_range = compute_date_range(records)
 
-    editor_path = render("map_tool_editor_template.html", "sharon_sightings_map_editor.html",
-                          data_json, data_version, date_range)
-    viewer_path = render("map_tool_viewer_template.html", "sharon_sightings_map_viewer.html",
-                          data_json, data_version, date_range)
+    editor_path, editor_sw_version = render("map_tool_editor_template.html", "sharon_sightings_map_editor.html",
+                                             data_json, data_version, date_range)
+    viewer_path, viewer_sw_version = render("map_tool_viewer_template.html", "sharon_sightings_map_viewer.html",
+                                             data_json, data_version, date_range)
 
     print(f"Charted {len(records)} of {len(rows)} rows (excluded rows omitted).")
     print(f"Observation date range: {date_range or '(none parseable)'}")
-    print(f"Wrote {editor_path}")
-    print(f"Wrote {viewer_path}")
+    print(f"Wrote {editor_path} (build {editor_sw_version})")
+    print(f"Wrote {viewer_path} (build {viewer_sw_version})")
     print(f"Data version: {data_version}")
 
 
