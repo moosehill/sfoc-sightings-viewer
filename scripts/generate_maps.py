@@ -28,6 +28,7 @@ ROOT = os.path.join(os.path.dirname(__file__), "..")
 DATASET_PATH = os.path.join(ROOT, "data", "working_dataset.csv")
 TEMPLATES_DIR = os.path.join(ROOT, "templates")
 PUBLIC_DIR = os.path.join(ROOT, "public")
+VERSION_HISTORY_PATH = os.path.join(ROOT, "scripts", "version_history.json")
 
 # ObservationDate is free-text scraped from ~12 years of volunteer-entered
 # posts, so formats vary a lot (M/D/YY, M/D/YYYY, "Month DD, YYYY", bare
@@ -93,34 +94,72 @@ def build_records(rows):
 def compute_date_range(records):
     """Returns a display string like 'Jan 2014 - Jul 2026' covering only the
     records that actually get a marker on the map (has coordinates), or ''
-    if nothing parseable was found."""
+    if nothing parseable was found.
+
+    Also returns the list of (WPPostId, raw date string) for any charted
+    record whose ObservationDate parsed to a date after today -- a sighting
+    can't have been observed in the future, so these are almost certainly
+    data-entry typos (e.g. a two-digit year like "27" meant "17"/"07" and
+    got read as 2027). They're excluded from the displayed range and flagged
+    so the source row can be corrected.
+    """
     charted = [r for r in records if r["Latitude"] != "" and r["Longitude"] != ""]
-    parsed = [d for d in (parse_observation_date(r["ObservationDate"]) for r in charted) if d]
+    today = datetime.now()
+    parsed = []
+    future = []
+    for r in charted:
+        d = parse_observation_date(r["ObservationDate"])
+        if not d:
+            continue
+        if d > today:
+            future.append((r.get("WPPostId", ""), r["ObservationDate"]))
+        else:
+            parsed.append(d)
     if not parsed:
-        return ""
+        return "", future
     lo, hi = min(parsed), max(parsed)
     if lo.strftime("%Y-%m") == hi.strftime("%Y-%m"):
-        return lo.strftime("%b %Y")
-    return f"{lo.strftime('%b %Y')} - {hi.strftime('%b %Y')}"
+        range_str = lo.strftime("%b %Y")
+    else:
+        range_str = f"{lo.strftime('%b %Y')} - {hi.strftime('%b %Y')}"
+    return range_str, future
 
 
-def software_version(template_source):
-    """Short, stable hash of the template's own source code (not the data).
-    Changes if and only if the template itself changes, so it's a reliable
-    at-a-glance signal for "the tool was updated" vs. "just the data was
-    refreshed" -- unlike a manually-bumped version number, it can't go stale
-    from someone forgetting to bump it."""
-    return hashlib.sha256(template_source.encode("utf-8")).hexdigest()[:7]
+def load_version_history():
+    if os.path.exists(VERSION_HISTORY_PATH):
+        with open(VERSION_HISTORY_PATH, encoding="utf-8") as fh:
+            return json.load(fh)
+    return {}
 
 
-def render(template_name, out_name, data_json, data_version, date_range):
+def save_version_history(history):
+    with open(VERSION_HISTORY_PATH, "w", encoding="utf-8") as fh:
+        json.dump(history, fh, indent=2)
+        fh.write("\n")
+
+
+def software_version(key, template_source, history):
+    """Human-readable, incrementing version number for a template (e.g. 3,
+    meaning "the 3rd distinct version of this file we've ever generated").
+    A content hash of the template is used only internally to detect when
+    the template has actually changed vs. just been re-run; each *new* hash
+    for a given key gets the next integer, recorded in version_history.json
+    so the numbering is stable and keeps incrementing across machines/runs."""
+    h = hashlib.sha256(template_source.encode("utf-8")).hexdigest()
+    seen = history.setdefault(key, [])
+    if h not in seen:
+        seen.append(h)
+    return seen.index(h) + 1
+
+
+def render(template_name, out_name, data_json, data_version, date_range, key, history):
     with open(os.path.join(TEMPLATES_DIR, template_name), encoding="utf-8") as fh:
         template = fh.read()
-    sw_version = software_version(template)
+    sw_version = software_version(key, template, history)
     out = (template.replace("{{DATA_JSON}}", data_json)
                    .replace("{{DATA_VERSION}}", data_version)
                    .replace("{{DATE_RANGE}}", date_range)
-                   .replace("{{SOFTWARE_VERSION}}", sw_version))
+                   .replace("{{SOFTWARE_VERSION}}", str(sw_version)))
     os.makedirs(PUBLIC_DIR, exist_ok=True)
     out_path = os.path.join(PUBLIC_DIR, out_name)
     with open(out_path, "w", encoding="utf-8") as fh:
@@ -133,17 +172,25 @@ def main():
     records = build_records(rows)
     data_json = json.dumps(records, ensure_ascii=False)
     data_version = "v" + str(int(time.time()))
-    date_range = compute_date_range(records)
+    date_range, future_dated = compute_date_range(records)
 
+    history = load_version_history()
     editor_path, editor_sw_version = render("map_tool_editor_template.html", "sharon_sightings_map_editor.html",
-                                             data_json, data_version, date_range)
+                                             data_json, data_version, date_range, "editor", history)
     viewer_path, viewer_sw_version = render("map_tool_viewer_template.html", "sharon_sightings_map_viewer.html",
-                                             data_json, data_version, date_range)
+                                             data_json, data_version, date_range, "viewer", history)
+    save_version_history(history)
 
     print(f"Charted {len(records)} of {len(rows)} rows (excluded rows omitted).")
     print(f"Observation date range: {date_range or '(none parseable)'}")
-    print(f"Wrote {editor_path} (build {editor_sw_version})")
-    print(f"Wrote {viewer_path} (build {viewer_sw_version})")
+    if future_dated:
+        print(f"WARNING: {len(future_dated)} charted row(s) have an ObservationDate in the future "
+              f"and were excluded from the range above -- likely a typo'd year. Fix these in "
+              f"data/working_dataset.csv:")
+        for wp_post_id, raw in future_dated:
+            print(f"  - WPPostId {wp_post_id or '(unknown)'}: {raw!r}")
+    print(f"Wrote {editor_path} (build v{editor_sw_version})")
+    print(f"Wrote {viewer_path} (build v{viewer_sw_version})")
     print(f"Data version: {data_version}")
 
 
