@@ -36,7 +36,9 @@
   #toolbar { padding: 8px 14px; border-bottom: 1px solid var(--border); }
   #search { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
 
-  #listHeader { padding: 10px 14px 6px; font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+  #listHeader { padding: 10px 14px 6px; font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #clearSearch { border: none; background: none; color: var(--purple); font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; cursor: pointer; padding: 0; white-space: nowrap; }
+  #clearSearch:hover { text-decoration: underline; }
   #list { flex: 1 1 auto; overflow-y: auto; }
   .row { padding: 8px 14px; border-bottom: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
   .row:hover { background: #f1f5f9; }
@@ -91,7 +93,7 @@
   <div id="dragHandle" title="Drag to resize"></div>
   <div id="sidebar">
     <div id="header">
-      <h1>Sharon Sightings Map <span class="sw-version">v2</span></h1>
+      <h1>Sharon Sightings Map <span class="sw-version">v3</span></h1>
       <div class="date-range">May 2004 - Jul 2026</div>
       <div id="stats"></div>
     </div>
@@ -153,6 +155,10 @@ const markerById = {};
 
 const DEFAULT_STYLE = { radius: 7, weight: 2, color: '#ffffff', fillColor: '#2563eb', fillOpacity: 0.95 };
 const HIGHLIGHT_STYLE = { radius: 11, weight: 3, color: '#f59e0b', fillColor: '#2563eb', fillOpacity: 1 };
+// Distinct from HIGHLIGHT_STYLE (the single selected-point ring) so a point
+// that's both a search match and the currently-selected detail can show
+// both states without one silently overwriting the other.
+const SEARCH_HIGHLIGHT_STYLE = { radius: 9, weight: 3, color: '#7c3aed', fillColor: '#2563eb', fillOpacity: 1 };
 
 function makeMarker(d) {
   const m = L.circleMarker([d.lat, d.lon], Object.assign({
@@ -218,13 +224,43 @@ function suppressNextViewportReset() {
 let highlightedId = null;
 function setHighlight(id) {
   if (highlightedId != null && markerById[highlightedId]) {
-    markerById[highlightedId].setStyle(DEFAULT_STYLE);
+    // If the previously-selected point is still a search match, drop it
+    // back to the search-highlight style rather than all the way to
+    // default -- search highlighting stays on until the search itself is
+    // dismissed, independent of which single point is selected.
+    const prevId = highlightedId;
+    const prevStyle = searchHighlightIds.indexOf(prevId) !== -1 ? SEARCH_HIGHLIGHT_STYLE : DEFAULT_STYLE;
+    markerById[prevId].setStyle(prevStyle);
   }
   highlightedId = id;
   if (id != null && markerById[id]) {
     markerById[id].setStyle(HIGHLIGHT_STYLE);
     if (markerById[id].bringToFront) { markerById[id].bringToFront(); }
   }
+}
+
+// search result highlighting: every point matching the active search (within
+// the current scope) gets a highlight ring that stays on the map regardless
+// of pan/zoom/selection, until the search is cleared.
+let searchHighlightIds = [];
+function updateSearchHighlights() {
+  const newIds = currentSearch ? getBaseIds() : [];
+  const newSet = {};
+  newIds.forEach(function(id) { newSet[id] = true; });
+
+  searchHighlightIds.forEach(function(id) {
+    if (!newSet[id] && id !== highlightedId) {
+      const m = markerById[id];
+      if (m) { m.setStyle(DEFAULT_STYLE); }
+    }
+  });
+  newIds.forEach(function(id) {
+    if (id !== highlightedId) {
+      const m = markerById[id];
+      if (m) { m.setStyle(SEARCH_HIGHLIGHT_STYLE); }
+    }
+  });
+  searchHighlightIds = newIds;
 }
 
 function updateViewportIds() {
@@ -341,13 +377,28 @@ function listHeaderText(count) {
 }
 
 function renderList() {
+  updateSearchHighlights();
   const headerEl = document.getElementById('listHeader');
   const listEl = document.getElementById('list');
   listEl.innerHTML = '';
 
   const ids = getBaseIds();
   const items = ids.map(function(id) { return byId[id]; }).filter(Boolean);
-  headerEl.textContent = listHeaderText(items.length);
+  headerEl.innerHTML = '';
+  headerEl.appendChild(document.createTextNode(listHeaderText(items.length)));
+  if (currentSearch) {
+    const clearBtn = document.createElement('button');
+    clearBtn.id = 'clearSearch';
+    clearBtn.type = 'button';
+    clearBtn.textContent = 'Dismiss ×';
+    clearBtn.onclick = function() {
+      currentSearch = '';
+      document.getElementById('search').value = '';
+      renderLimit = 200;
+      renderList();
+    };
+    headerEl.appendChild(clearBtn);
+  }
 
   const toShow = items.slice(0, renderLimit);
   toShow.forEach(function(d) {
