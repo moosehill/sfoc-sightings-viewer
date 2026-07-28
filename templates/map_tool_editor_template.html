@@ -228,6 +228,23 @@ let currentSearch = '';
 let renderLimit = 200;
 let selectedId = null;
 
+// Only list points currently visible on the map, same idea as the public
+// viewer -- except entries with no coordinates yet (status 'unplaced')
+// can't be "in view" anywhere on the map at all, so they're always treated
+// as in-scope. Otherwise the "Needs review" filter -- whose whole purpose
+// is finding sightings that still need a location set -- would only ever
+// show whichever unplaced rows happened to fall under the current view,
+// which is nothing, since they have no location to fall under it.
+let viewportIdSet = new Set();
+function updateViewportIds() {
+  const bounds = map.getBounds();
+  const ids = DATA.filter(function(d) {
+    if (d.lat == null || d.lon == null) return true;
+    return bounds.contains([d.lat, d.lon]);
+  }).map(function(d) { return d.id; });
+  viewportIdSet = new Set(ids);
+}
+
 const FILTERS = [
   { key: 'all', label: 'All' },
   { key: 'unplaced', label: 'Needs review' },
@@ -263,6 +280,7 @@ function renderStats() {
 }
 
 function matchesFilter(d) {
+  if (!viewportIdSet.has(d.id)) return false;
   if (currentFilter !== 'all' && d.status !== currentFilter) return false;
   if (currentSearch) {
     const hay = (d.CommonName + ' ' + d.ObservationLocation + ' ' + d.ScientificName + ' ' + d.Observer).toLowerCase();
@@ -322,6 +340,7 @@ function renderDetail(id) {
     '<div class="field"><b>Date/Time:</b>' + escapeHtml(d.ObservationDate) + ' ' + escapeHtml(d.ObservationTime || '') + '</div>' +
     '<div class="field"><b>Location text:</b>' + escapeHtml(d.ObservationLocation) + '</div>' +
     '<div class="field"><b>Coordinates:</b>' + coordsText + '</div>' +
+    (d.PostUrl ? '<div class="field"><a href="' + escapeHtml(d.PostUrl) + '" target="_blank" rel="noopener">View original sighting post →</a></div>' : '') +
     (d.status === 'excluded' ? '<div class="field" style="color:var(--gray)">Hidden from the map. Click Confirm, Flag, or Set on map below to bring it back.</div>' : '') +
     '<div id="detailActions">' +
       '<button id="btnConfirm">✅ Confirm</button>' +
@@ -400,6 +419,12 @@ document.getElementById('resetBtn').onclick = function() {
 };
 
 // ---- init ----
+updateViewportIds();
+map.on('moveend', function() {
+  updateViewportIds();
+  renderLimit = 200;
+  renderList();
+});
 renderFilters();
 renderStats();
 renderList();

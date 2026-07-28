@@ -49,6 +49,13 @@
 
   .leaflet-tooltip.sfoc-tip { font-size: 12px; padding: 5px 8px; }
 
+  /* Cluster bubble containing one or more search matches -- overrides the
+     default green/yellow/orange coloring from MarkerCluster.Default.css
+     regardless of size class. This <style> block is declared after that
+     stylesheet's <link>, so equal-specificity rules here win the cascade. */
+  .marker-cluster-search-match { background-color: rgba(220, 38, 38, 0.6); }
+  .marker-cluster-search-match div { background-color: rgba(185, 28, 28, 0.9); color: #fff; }
+
   /* Drag handle for resizing map vs. sidebar on mobile. Hidden entirely on
      desktop (side-by-side layout has nothing to drag). */
   #dragHandle {
@@ -99,7 +106,7 @@
     </div>
     <div id="detail" class="empty">Click on a data point for more information.</div>
     <div id="toolbar">
-      <input id="search" type="text" placeholder="Search species or location…" />
+      <input id="search" type="text" placeholder="Search species or location… (press Enter)" />
     </div>
     <div id="listHeader"></div>
     <div id="list"></div>
@@ -143,11 +150,52 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
+// Declared here (ahead of the cluster group / iconCreateFunction below,
+// rather than down with the rest of the sidebar state) because
+// iconCreateFunction runs synchronously as soon as markers are added to the
+// cluster -- which happens almost immediately, well before the script
+// reaches the "Sidebar state" section further down. Referencing a `let`
+// before its own declaration line throws (temporal dead zone), which would
+// silently abort the whole script partway through adding markers.
+let currentSearch = '';
+let searchHighlightIds = [];
+
 const cluster = L.markerClusterGroup({
   maxClusterRadius: 40,
   spiderfyOnMaxZoom: true,
   disableClusteringAtZoom: null,
-  zoomToBoundsOnClick: true
+  zoomToBoundsOnClick: true,
+  // Mirrors Leaflet.markercluster's own _defaultIconCreateFunction (same
+  // size thresholds/markup) so clusters look identical to the library
+  // default, except: if any point inside a cluster is currently a search
+  // match, the bubble gets an extra CSS class that turns it red -- a
+  // visible signal that a result is inside, without moving the point
+  // itself out of its real location.
+  iconCreateFunction: function(clusterObj) {
+    const childCount = clusterObj.getChildCount();
+    let sizeClass = 'marker-cluster-small';
+    if (childCount >= 100) { sizeClass = 'marker-cluster-large'; }
+    else if (childCount >= 10) { sizeClass = 'marker-cluster-medium'; }
+    // Bubble size/color class is still based on the total point count
+    // (reflects actual density), but while a search is active, the number
+    // printed inside a matching bubble is how many of ITS points are
+    // matches, not how many points it has overall -- reverts to the normal
+    // total automatically once the search is dismissed (currentSearch back
+    // to '', so hasMatch is false and displayCount falls back to childCount).
+    let displayCount = childCount;
+    let hasMatch = false;
+    if (currentSearch) {
+      const matchCount = clusterObj.getAllChildMarkers().filter(function(m) {
+        return searchHighlightIds.indexOf(m.sfocId) !== -1;
+      }).length;
+      if (matchCount > 0) {
+        hasMatch = true;
+        displayCount = matchCount;
+      }
+    }
+    const cls = 'marker-cluster ' + sizeClass + (hasMatch ? ' marker-cluster-search-match' : '');
+    return L.divIcon({ html: '<div><span>' + displayCount + '</span></div>', className: cls, iconSize: L.point(40, 40) });
+  }
 });
 map.addLayer(cluster);
 
@@ -158,7 +206,7 @@ const HIGHLIGHT_STYLE = { radius: 11, weight: 3, color: '#f59e0b', fillColor: '#
 // Distinct from HIGHLIGHT_STYLE (the single selected-point ring) so a point
 // that's both a search match and the currently-selected detail can show
 // both states without one silently overwriting the other.
-const SEARCH_HIGHLIGHT_STYLE = { radius: 9, weight: 3, color: '#7c3aed', fillColor: '#2563eb', fillOpacity: 1 };
+const SEARCH_HIGHLIGHT_STYLE = { radius: 9, weight: 3, color: '#7f1d1d', fillColor: '#dc2626', fillOpacity: 1 };
 
 function makeMarker(d) {
   const m = L.circleMarker([d.lat, d.lon], Object.assign({
@@ -199,7 +247,6 @@ DATA.forEach(function(d) {
 // currentSearch: when non-empty, overrides everything and searches all DATA.
 let viewportIds = [];
 let explicitScope = null;
-let currentSearch = '';
 let selectedId = null;
 let renderLimit = 200;
 
@@ -242,12 +289,17 @@ function setHighlight(id) {
 // search result highlighting: every point matching the active search (within
 // the current scope) gets a highlight ring that stays on the map regardless
 // of pan/zoom/selection, until the search is cleared.
-let searchHighlightIds = [];
 function updateSearchHighlights() {
   const newIds = currentSearch ? getBaseIds() : [];
   const newSet = {};
   newIds.forEach(function(id) { newSet[id] = true; });
 
+  // Points keep their real location and clustering behavior at all times --
+  // only their style changes. A matched point that's currently folded into
+  // a cluster bubble won't show its own red ring (the bubble icon covers
+  // it), so cluster.refreshClusters() below also recomputes every cluster's
+  // icon via iconCreateFunction, which colors a bubble red if any point
+  // inside it is a match.
   searchHighlightIds.forEach(function(id) {
     if (!newSet[id] && id !== highlightedId) {
       const m = markerById[id];
@@ -261,6 +313,7 @@ function updateSearchHighlights() {
     }
   });
   searchHighlightIds = newIds;
+  cluster.refreshClusters();
 }
 
 function updateViewportIds() {
@@ -436,7 +489,13 @@ function renderDetail() {
     (d.PostUrl ? '<div class="field"><a href="' + escapeHtml(d.PostUrl) + '" target="_blank" rel="noopener">View original sighting post →</a></div>' : '');
 }
 
-document.getElementById('search').addEventListener('input', function(e) {
+// Search only runs on Enter (not on every keystroke) -- typing quickly and
+// re-highlighting/re-filtering after every character was distracting, and
+// on mobile this also matches the on-screen keyboard's "search"/"go" key,
+// which fires the same 'Enter' keydown.
+document.getElementById('search').addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
   currentSearch = e.target.value.trim().toLowerCase();
   renderLimit = 200;
   renderList();

@@ -49,10 +49,56 @@ LANDMARK_OVERRIDES = {
 }
 
 # Regex-based location rules, checked in order for text NOT already in the
-# gazetteer or landmark overrides.
-ADDR_RE = re.compile(r"^\s*(\d+\s+[A-Za-z0-9.'\- ]+?(?:St|Street|Rd|Road|Ave|Avenue|Ln|Lane|Dr|Drive|Way|Ct|Court|Cir|Circle|Ter|Terrace|Pkwy|Parkway))\b", re.IGNORECASE)
+# gazetteer or landmark overrides. All three regexes below should recognize
+# the same set of street-suffix words -- STREET_RE (for a bare street name
+# with no house number) used to be missing several suffixes that ADDR_RE
+# already had (Ct/Court, Cir/Circle, Ter/Terrace, Pkwy/Parkway), which meant
+# e.g. "Moose Hill Parkway" with no leading house number would silently fall
+# through to unplaced even though "123 Moose Hill Parkway" would have
+# matched fine. Defined once here so the two lists can't drift apart again.
+STREET_SUFFIXES = (
+    r"St|Street|Rd|Road|Ave|Avenue|Ln|Lane|Dr|Drive|Way|Ct|Court|Cir|Circle|"
+    r"Ter|Terrace|Pkwy|Parkway|Blvd|Boulevard|Hwy|Highway|Pl|Place"
+)
+ADDR_RE = re.compile(r"^\s*(\d+\s+[A-Za-z0-9.'\- ]+?(?:" + STREET_SUFFIXES + r"))\b", re.IGNORECASE)
 INTERSECTION_RE = re.compile(r"([A-Za-z][A-Za-z .'\-]{2,30}?)\s+(?:&|and)\s+([A-Za-z][A-Za-z .'\-]{2,30}?)(?:\s+Streets?\.?|\s+Sts?\.?)?\b", re.IGNORECASE)
-STREET_RE = re.compile(r"\b([A-Za-z][A-Za-z .'\-]{2,40}?\s+(?:St|Street|Rd|Road|Ave|Avenue|Ln|Lane|Dr|Drive|Way))\b", re.IGNORECASE)
+STREET_RE = re.compile(r"\b([A-Za-z][A-Za-z .'\-]{2,40}?\s+(?:" + STREET_SUFFIXES + r"))\b", re.IGNORECASE)
+
+# Synonym pairs for the street-suffix word itself (independent of the regexes
+# above, which just find "does this look like a street"). Used so a
+# gazetteer lookup for "Moose Hill Parkway" also tries "Moose Hill Pkwy" (and
+# vice versa) before giving up -- otherwise the same real street ends up
+# geocoded via two entirely separate cache/gazetteer keys depending on which
+# spelling an observer happened to type.
+SUFFIX_SYNONYMS = {
+    "street": "st", "st": "street",
+    "road": "rd", "rd": "road",
+    "avenue": "ave", "ave": "avenue",
+    "lane": "ln", "ln": "lane",
+    "drive": "dr", "dr": "drive",
+    "court": "ct", "ct": "court",
+    "circle": "cir", "cir": "circle",
+    "terrace": "ter", "ter": "terrace",
+    "boulevard": "blvd", "blvd": "boulevard",
+    "highway": "hwy", "hwy": "highway",
+    "place": "pl", "pl": "place",
+    "parkway": "pkwy", "pkwy": "parkway",
+}
+_SUFFIX_SWAP_RE = re.compile(
+    r"\b(" + "|".join(sorted(SUFFIX_SYNONYMS, key=len, reverse=True)) + r")\b\.?"
+)
+
+
+def _suffix_variant(key):
+    """If `key` (already lowercased/normalized) contains a recognized
+    street-suffix word, return a copy with that word swapped to its synonym
+    (first occurrence only) -- e.g. 'moose hill parkway' -> 'moose hill
+    pkwy'. Returns None if no recognized suffix is present."""
+    m = _SUFFIX_SWAP_RE.search(key)
+    if not m:
+        return None
+    suffix = m.group(1)
+    return key[:m.start()] + SUFFIX_SYNONYMS[suffix] + key[m.end():]
 
 GENERIC_TOWN_KEYWORDS = ["sharon", "yard", "driveway", "backyard"]
 GENERIC_TOWN_POINT = (42.12367, -71.17897)
@@ -154,6 +200,11 @@ class Geocoder:
         if key in self.gazetteer:
             g = self.gazetteer[key]
             return (g["lat"], g["lon"], "auto", "gazetteer exact match")
+
+        variant = _suffix_variant(key)
+        if variant and variant in self.gazetteer:
+            g = self.gazetteer[variant]
+            return (g["lat"], g["lon"], "auto", f"gazetteer match via street-suffix synonym ({key!r} ~ {variant!r})")
 
         for name, (lat, lon) in LANDMARK_OVERRIDES.items():
             if name in key:
